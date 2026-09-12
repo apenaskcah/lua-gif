@@ -237,7 +237,7 @@ dropZone.addEventListener('drop', e => {
   if (f && (f.type === 'image/gif' || f.name.toLowerCase().endsWith('.gif'))) {
     loadGif(f);
   } else {
-    alert('Por favor, envie apenas arquivos .gif!');
+    alert('Only .gif files!');
   }
 });
 fileInput.addEventListener('change', () => { 
