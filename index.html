@@ -684,7 +684,8 @@ function processAndGenerateLua() {
   luaLines.push('    if name == "' + playerName + '" then');
   luaLines.push('        tfm.exec.setVampirePlayer(name, true)');
   luaLines.push('        if os.time() > time then');
-  luaLines.push('            time = os.time() + 1000 / ' + (typeof detectedRef !== 'undefined' ? detectedRef : 8));
+  // Multiplicado por 2 no divisor para reduzir o intervalo pela metade e dobrar a velocidade
+  luaLines.push('            time = os.time() + (1000 / (' + (typeof detectedRef !== 'undefined' ? detectedRef : 8) + ' * 2))');
   luaLines.push('            desenharTela(id)');
   luaLines.push('            id = (id + 1) % #' + 'frames');
   luaLines.push('        end');
