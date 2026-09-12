@@ -329,13 +329,13 @@
   <div class="controls">
     <div class="ctrl-group">
       <label>Resolution X</label>
-      <input type="range" id="w-slider" min="5" max="150" value="20" step="1">
-      <div class="val" id="w-val">20 px</div>
+      <input type="range" id="w-slider" min="5" max="400" value="200" step="1">
+      <div class="val" id="w-val">200 px</div>
     </div>
     <div class="ctrl-group">
       <label>Resolution Y</label>
-      <input type="range" id="h-slider" min="5" max="150" value="15" step="1">
-      <div class="val" id="h-val">15 px</div>
+      <input type="range" id="h-slider" min="5" max="300" value="100" step="1">
+      <div class="val" id="h-val">100 px</div>
     </div>
   </div>
 
@@ -454,7 +454,6 @@ fileInput.addEventListener('change', () => {
   }
 });
 
-// Paleta de pixels fornecida (1x1)
 const ci = {
 	red: "1856d77edec.png",
 	orange: "1856d827d2c.png",
@@ -510,19 +509,17 @@ function getExactOrClosestPaletteImage(r, g, b, force) {
 function toHex(r, g, b) {
   return ((r << 16) | (g << 8) | b).toString(16).padStart(6, '0');
 }
-function colorKey(r, g, b) { return (r << 16) | (g << 8) | b; }
 
-// Mantém rX * rY = 300 proporcionalmente ao tamanho original do GIF
 function updateDimensionsBasedOnAspect(origW, origH) {
   if (!origW || !origH) return;
   const ratio = origW / origH;
-  let targetH = Math.round(Math.sqrt(300 / ratio));
+  let targetH = 100;
   let targetW = Math.round(targetH * ratio);
   
-  if (targetW < 5) targetW = 5;
-  if (targetH < 5) targetH = 5;
-  if (targetW > 150) targetW = 150;
-  if (targetH > 150) targetH = 150;
+  if (targetW > 200) {
+      targetW = 200;
+      targetH = Math.round(targetW / ratio);
+  }
 
   wSlider.value = targetW;
   hSlider.value = targetH;
@@ -595,7 +592,7 @@ async function loadGif(file) {
         videoFrame.close();
       }
     } else {
-      throw new Error("your browser does not support native multi-frame decoding. use chrome or edge");
+      throw new Error("seu navegador não suporta decodificação multi-frame nativa.");
     }
 
     fill.style.width = '100%';
@@ -717,111 +714,128 @@ function greedyMesh(frameRgba, srcW, srcH, targetW, targetH, thresh, forcePalett
 function processAndGenerateLua() {
   if (gifFramesData.length === 0) return;
 
-  const targetW = parseInt(wSlider.value);
-  const targetH = parseInt(hSlider.value);
-  const offsetX = parseInt(document.getElementById('offset-x').value) || 0;
-  const offsetY = parseInt(document.getElementById('offset-y').value) || 0;
-  const scale = parseInt(document.getElementById('scale-input').value) || 1;
-  const forcePalette = paletteToggle.checked;
-  const playerName = document.getElementById('player-name').value.trim() || "Nickname#0000";
-  const isFixed = fixedToggle.checked ? 'true' : 'false';
-  const thresh = 10; 
+  genBtn.disabled = true;
+  genBtn.textContent = "Processando Frames...";
 
-  const maxW = 800;
-  const maxH = 400;
-  const aspectRatio = targetW / targetH;
-  
-  let renderW = maxW;
-  let renderH = maxW / aspectRatio;
-  
-  if (renderH > maxH) {
-    renderH = maxH;
-    renderW = maxH * aspectRatio;
-  }
+  setTimeout(() => {
+    const targetW = parseInt(wSlider.value);
+    const targetH = parseInt(hSlider.value);
+    const offsetX = parseInt(document.getElementById('offset-x').value) || 0;
+    const offsetY = parseInt(document.getElementById('offset-y').value) || 0;
+    const scale = parseInt(document.getElementById('scale-input').value) || 1;
+    const forcePalette = paletteToggle.checked;
+    const playerName = document.getElementById('player-name').value.trim() || "Nickname#0000";
+    const isFixed = fixedToggle.checked ? 'true' : 'false';
+    const thresh = 10; 
 
-  const scaleX = (renderW / targetW) * scale;
-  const scaleY = (renderH / targetH) * scale;
-
-  let totalBlocksMax = 0;
-  const luaLines = [];
-  
-  luaLines.push('-- made by Kcah#2475 & G484#5825');
-  luaLines.push('tfm.exec.disableAutoNewGame(true)');
-  luaLines.push('');
-  luaLines.push('local function desenharTela(id)');
-
-  for (let i = 0; i < gifFramesData.length; i++) {
-    const frame = gifFramesData[i];
-    const rects = greedyMesh(frame.data, frame.width, frame.height, targetW, targetH, thresh, forcePalette);
-    if (rects.length > totalBlocksMax) totalBlocksMax = rects.length;
-
-    if (i === 0) {
-      luaLines.push('  if id == 0 then');
-    } else {
-      luaLines.push('  elseif id == ' + i + ' then');
+    const maxW = 800;
+    const maxH = 400;
+    const aspectRatio = targetW / targetH;
+    
+    let renderW = maxW;
+    let renderH = maxW / aspectRatio;
+    
+    if (renderH > maxH) {
+      renderH = maxH;
+      renderW = maxH * aspectRatio;
     }
 
-    let imageGroups = {};
-    let textAreas = [];
+    const scaleX = (renderW / targetW) * scale;
+    const scaleY = (renderH / targetH) * scale;
 
-    for (let r = 0; r < rects.length; r++) {
-      const rc = rects[r];
-      const finalX = Math.floor(offsetX + (rc.x * scaleX));
-      const finalY = Math.floor(offsetY + (rc.y * scaleY));
-      const finalW = Math.ceil(rc.w * scaleX);
-      const finalH = Math.ceil(rc.h * scaleY);
+    let totalBlocksMax = 0;
+    const luaLines = [];
+    
+    luaLines.push('-- made by Kcah#2475 & G484#5825');
+    luaLines.push('tfm.exec.disableAutoNewGame(true)');
+    luaLines.push('local activeImages = {}');
+    luaLines.push('');
+    luaLines.push('local function limparImagens()');
+    luaLines.push('    for _, idImg in ipairs(activeImages) do');
+    luaLines.push('        tfm.exec.removeImage(idImg)');
+    luaLines.push('    end');
+    luaLines.push('    activeImages = {}');
+    luaLines.push('end');
+    luaLines.push('');
+    luaLines.push('local function desenharTela(id)');
+    luaLines.push('    limparImagens()');
 
-      if (rc.imgId) {
-        if (!imageGroups[rc.imgId]) imageGroups[rc.imgId] = [];
-        imageGroups[rc.imgId].push('{' + finalX + ',' + finalY + ',' + finalW + ',' + finalH + '}');
+    for (let i = 0; i < gifFramesData.length; i++) {
+      const frame = gifFramesData[i];
+      const rects = greedyMesh(frame.data, frame.width, frame.height, targetW, targetH, thresh, forcePalette);
+      if (rects.length > totalBlocksMax) totalBlocksMax = rects.length;
+
+      if (i === 0) {
+        luaLines.push('  if id == 0 then');
       } else {
-        textAreas.push('{' + finalX + ',' + finalY + ',' + finalW + ',' + finalH + ',0x' + rc.hex + '}');
+        luaLines.push('  elseif id == ' + i + ' then');
+      }
+
+      let imageGroups = {};
+      let textAreas = [];
+
+      for (let r = 0; r < rects.length; r++) {
+        const rc = rects[r];
+        const finalX = Math.floor(offsetX + (rc.x * scaleX));
+        const finalY = Math.floor(offsetY + (rc.y * scaleX));
+        const finalW = Math.ceil(rc.w * scaleX);
+        const finalH = Math.ceil(rc.h * scaleY);
+
+        if (rc.imgId) {
+          if (!imageGroups[rc.imgId]) imageGroups[rc.imgId] = [];
+          imageGroups[rc.imgId].push('{' + finalX + ',' + finalY + ',' + finalW + ',' + finalH + '}');
+        } else {
+          textAreas.push('{' + finalX + ',' + finalY + ',' + finalW + ',' + finalH + ',0x' + rc.hex + '}');
+        }
+      }
+
+      if (Object.keys(imageGroups).length > 0) {
+        luaLines.push('    for imgId, data in pairs({');
+        for (let imgId in imageGroups) {
+          luaLines.push('      ["' + imgId + '"] = {' + imageGroups[imgId].join(",") + '},');
+        }
+        luaLines.push('    }) do');
+        luaLines.push('      for _, r in ipairs(data) do');
+        let imgLayer = isFixed === 'true' ? '"%1"' : '"!1"';
+        luaLines.push('        table.insert(activeImages, tfm.exec.addImage(imgId, ' + imgLayer + ', r[1], r[2], nil, r[3], r[4], 0, 1, 0, 0))');
+        luaLines.push('      end');
+        luaLines.push('    end');
+      }
+
+      if (textAreas.length > 0) {
+        luaLines.push('    for _, r in ipairs({' + textAreas.join(",") + '}) do');
+        luaLines.push('      ui.addTextArea(0, "", nil, r[1], r[2], r[3], r[4], r[5], r[5], 1, ' + isFixed + ')');
+        luaLines.push('    end');
       }
     }
 
-    if (Object.keys(imageGroups).length > 0) {
-      luaLines.push('    for imgId, data in pairs({');
-      for (let imgId in imageGroups) {
-        luaLines.push('      ["' + imgId + '"] = {' + imageGroups[imgId].join(",") + '},');
-      }
-      luaLines.push('    }) do');
-      luaLines.push('      for _, r in ipairs(data) do');
-      let imgLayer = isFixed === 'true' ? '"%1"' : '"!1"';
-      luaLines.push('        tfm.exec.addImage(imgId, ' + imgLayer + ', r[1], r[2], nil, r[3], r[4], 0, 1, 0, 0)');
-      luaLines.push('      end');
-      luaLines.push('    end');
-    }
+    luaLines.push('  end');
+    luaLines.push('end');
+    luaLines.push('');
+    luaLines.push('local id = 0');
+    luaLines.push('tfm.exec.setVampirePlayer("' + playerName + '", true)');
+    luaLines.push('local time = os.time()');
+    luaLines.push('');
+    luaLines.push('eventPlayerVampire = function(name)');
+    luaLines.push('    tfm.exec.setVampirePlayer(name, false)');
+    luaLines.push('    if name == "' + playerName + '" then');
+    luaLines.push('        tfm.exec.setVampirePlayer(name, true)');
+    luaLines.push('        if os.time() > time then');
+    luaLines.push('            time = os.time() + (1000 / (' + detectedRef + ' * 2))');
+    luaLines.push('            desenharTela(id)');
+    luaLines.push('            id = (id + 1) % ' + gifFramesData.length);
+    luaLines.push('        end');
+    luaLines.push('    end');
+    luaLines.push('end');
 
-    if (textAreas.length > 0) {
-      luaLines.push('    for _, r in ipairs({' + textAreas.join(",") + '}) do');
-      luaLines.push('      ui.addTextArea(0, "", nil, r[1], r[2], r[3], r[4], r[5], r[5], 1, ' + isFixed + ')');
-      luaLines.push('    end');
-    }
-  }
+    codeOut.value = luaLines.join('\n');
+    document.getElementById('code-area').style.display = 'block';
+    document.getElementById('warning').style.display = totalBlocksMax > 500 ? 'block' : 'none';
+    codeOut.scrollTop = 0;
 
-  luaLines.push('  end');
-  luaLines.push('end');
-  luaLines.push('');
-  luaLines.push('local id = 0');
-  luaLines.push('tfm.exec.setVampirePlayer("' + playerName + '", true)');
-  luaLines.push('local time = os.time()');
-  luaLines.push('');
-  luaLines.push('eventPlayerVampire = function(name)');
-  luaLines.push('    tfm.exec.setVampirePlayer(name, false)');
-  luaLines.push('    if name == "' + playerName + '" then');
-  luaLines.push('        tfm.exec.setVampirePlayer(name, true)');
-  luaLines.push('        if os.time() > time then');
-  luaLines.push('            time = os.time() + (1000 / (' + (typeof detectedRef !== 'undefined' ? detectedRef : 8) + ' * 2))');
-  luaLines.push('            desenharTela(id)');
-  luaLines.push('            id = (id + 1) % ' + gifFramesData.length);
-  luaLines.push('        end');
-  luaLines.push('    end');
-  luaLines.push('end');
-
-  codeOut.value = luaLines.join('\n');
-  document.getElementById('code-area').style.display = 'block';
-  document.getElementById('warning').style.display = totalBlocksMax > 500 ? 'block' : 'none';
-  codeOut.scrollTop = 0;
+    genBtn.disabled = false;
+    genBtn.textContent = "Generate Lua Code";
+  }, 50);
 }
 </script>
 </body>
