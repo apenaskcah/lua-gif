@@ -397,7 +397,7 @@
 
   <div class="code-area" id="code-area">
     <div class="code-header">
-      <span>Generated Lua Code</span>
+      <span id="code-title-label">Generated Lua Code</span>
       <button class="copy-btn" id="copy-btn">Copy Code</button>
     </div>
     <textarea id="code-out" readonly></textarea>
@@ -500,7 +500,34 @@ function getClosestPaletteColor(r, g, b) {
 function getExactOrClosestPaletteImage(r, g, b, force) {
     let closest = getClosestPaletteColor(r, g, b);
     if (force) return closest;
-    if (colorDistance(r, g, b, closest.r, closest.g, closest.b) < 15) {
+    
+    let distClosest = colorDistance(r, g, b, closest.r, closest.g, closest.b);
+    
+    // Se o tom mais próximo for preto ou branco, aplicamos a regra de ser 2x mais perto
+    if (closest.hex === "000000" || closest.hex === "FFFFFF") {
+        let secondClosestDist = Infinity;
+        for (let i = 0; i < imgPalette.length; i++) {
+            if (imgPalette[i].hex !== "000000" && imgPalette[i].hex !== "FFFFFF") {
+                let d = colorDistance(r, g, b, imgPalette[i].r, imgPalette[i].g, imgPalette[i].b);
+                if (d < secondClosestDist) secondClosestDist = d;
+            }
+        }
+        // Só aceita preto/branco se a distância for pelo menos 2x menor que a cor colorida mais próxima
+        if (distClosest * 2 > secondClosestDist) {
+            // Encontra a cor colorida mais próxima de fato
+            let bestColor = imgPalette[0];
+            let minD = Infinity;
+            for (let i = 0; i < imgPalette.length; i++) {
+                if (imgPalette[i].hex !== "000000" && imgPalette[i].hex !== "FFFFFF") {
+                    let d = colorDistance(r, g, b, imgPalette[i].r, imgPalette[i].g, imgPalette[i].b);
+                    if (d < minD) { minD = d; bestColor = imgPalette[i]; }
+                }
+            }
+            return bestColor;
+        }
+    }
+
+    if (distClosest < 25) {
         return closest;
     }
     return null; 
@@ -829,6 +856,7 @@ function processAndGenerateLua() {
     luaLines.push('end');
 
     codeOut.value = luaLines.join('\n');
+    document.getElementById('code-title-label').textContent = 'Generated Lua Code (' + totalBlocksMax + ')';
     document.getElementById('code-area').style.display = 'block';
     document.getElementById('warning').style.display = totalBlocksMax > 500 ? 'block' : 'none';
     codeOut.scrollTop = 0;
