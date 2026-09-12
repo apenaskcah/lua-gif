@@ -4,53 +4,106 @@
 <meta charset="UTF-8">
 <title>Lua GIF Generator - Transformice</title>
 <style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
   *{box-sizing:border-box;margin:0;padding:0}
   body {
-    background: #141417;
-    color: #e1e1e6;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    padding: 2rem;
+    background: #09090b;
+    color: #f4f4f5;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    padding: 3rem 1rem;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
   }
-  .wrap{max-width:900px;margin:0 auto;background:#1e1e24;padding:2rem;border-radius:12px;border:1px solid #2a2a35;}
-  h2{font-size:20px;font-weight:600;color:#fff;margin-bottom:6px}
-  .sub{font-size:13px;color:#9ca3af;margin-bottom:1.5rem}
-  .drop-zone{border:2px dashed #3f3f46;border-radius:8px;padding:2rem;text-align:center;cursor:pointer;background:#27272a;transition:background 0.15s;margin-bottom:1.25rem}
-  .drop-zone:hover{background:#323238}
-  .drop-zone p{font-size:14px;color:#a1a1aa}
-  
+
+  .wrap {
+    width: 100%;
+    max-width: 960px;
+    background: #121216;
+    padding: 2.5rem;
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+  }
+
+  h2 {
+    font-size: 22px;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 1.75rem;
+    letter-spacing: -0.025em;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  h2::before {
+    content: '';
+    display: inline-block;
+    width: 8px;
+    height: 20px;
+    background: #6366f1;
+    border-radius: 4px;
+  }
+
+  .drop-zone {
+    border: 2px dashed rgba(255, 255, 255, 0.12);
+    border-radius: 12px;
+    padding: 2.5rem 1.5rem;
+    text-align: center;
+    cursor: pointer;
+    background: #18181b;
+    transition: all 0.2s ease;
+    margin-bottom: 1.5rem;
+  }
+  .drop-zone:hover {
+    background: #1f1f23;
+    border-color: #6366f1;
+    transform: translateY(-2px);
+  }
+  .drop-zone p {
+    font-size: 14px;
+    color: #d4d4d8;
+    font-weight: 500;
+  }
+  .drop-zone b { color: #818cf8; }
+
   .preview-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 16px;
-    margin-bottom: 1.25rem;
+    gap: 20px;
+    margin-bottom: 1.5rem;
     display: none;
   }
   .preview-box {
-    background: #121215;
-    border: 1px solid #2a2a35;
-    border-radius: 8px;
-    padding: 12px;
+    background: #18181b;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 12px;
+    padding: 16px;
     text-align: center;
     display: flex;
     flex-direction: column;
   }
   .preview-box h3 {
-    font-size: 12px;
-    color: #9ca3af;
-    margin-bottom: 8px;
+    font-size: 11px;
+    color: #71717a;
+    margin-bottom: 12px;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: 1px;
+    font-weight: 600;
   }
   .preview-box .canvas-wrap {
-    background: #18181b;
-    border-radius: 6px;
-    height: 180px;
+    background: #0f0f12;
+    border-radius: 8px;
+    height: 200px;
     display: flex;
     align-items: center;
     justify-content: center;
     overflow: hidden;
-    padding: 8px;
+    padding: 12px;
     flex-grow: 1;
+    border: 1px solid rgba(255, 255, 255, 0.04);
   }
   .preview-box img, .preview-box canvas {
     max-width: 100%;
@@ -62,20 +115,56 @@
     image-rendering: crisp-edges;
   }
 
-  .controls{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:1.25rem}
-  .ctrl-group label{font-size:12px;color:#a1a1aa;display:block;margin-bottom:6px}
-  .ctrl-group .val{font-size:13px;font-weight:500;color:#fff;margin-top:4px}
-  input[type=range] { width: 100%; accent-color: #6366f1; }
-  input[type=number], input[type=text] { width: 100%; padding: 8px; background: #27272a; border: 1px solid #3f3f46; color: #fff; border-radius: 6px; font-size: 13px; }
+  .controls {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-bottom: 1.25rem;
+  }
+  .ctrl-group {
+    background: #18181b;
+    padding: 14px 16px;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+  }
+  .ctrl-group label {
+    font-size: 12px;
+    color: #a1a1aa;
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+  }
+  .ctrl-group .val {
+    font-size: 13px;
+    font-weight: 600;
+    color: #fff;
+    margin-top: 6px;
+  }
+
+  input[type=range] {
+    width: 100%;
+    accent-color: #6366f1;
+    cursor: pointer;
+  }
+  input[type=number], input[type=text] {
+    width: 100%;
+    padding: 9px 12px;
+    background: #0f0f12;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: #fff;
+    border-radius: 8px;
+    font-size: 13px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  input[type=number]:focus, input[type=text]:focus {
+    border-color: #6366f1;
+  }
   
   .toggle-container {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    background: #27272a;
-    border: 1px solid #3f3f46;
-    padding: 10px 14px;
-    border-radius: 6px;
   }
   .switch {
     position: relative;
@@ -86,33 +175,120 @@
   .switch input { opacity: 0; width: 0; height: 0; }
   .slider {
     position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
-    background-color: #3f3f46; transition: .2s; border-radius: 22px;
+    background-color: #27272a; transition: .2s; border-radius: 22px;
   }
   .slider:before {
     position: absolute; content: ""; height: 16px; width: 16px; left: 3px; bottom: 3px;
     background-color: white; transition: .2s; border-radius: 50%;
   }
-  input:checked + .slider { background-color: #4f46e5; }
+  input:checked + .slider { background-color: #6366f1; }
   input:checked + .slider:before { transform: translateX(22px); }
 
-  .stats{display:flex;gap:12px;margin-bottom:1.25rem;flex-wrap:wrap}
-  .stat{background:#27272a;border-radius:8px;padding:12px 16px;flex:1;min-width:110px;border:1px solid #3f3f46}
-  .stat .num{font-size:22px;font-weight:600;color:#fff}
-  .stat .lbl{font-size:11px;color:#a1a1aa}
+  .stats {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+  }
+  .stat {
+    background: #18181b;
+    border-radius: 10px;
+    padding: 14px 18px;
+    flex: 1;
+    min-width: 130px;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+  }
+  .stat .num { font-size: 20px; font-weight: 700; color: #fff; }
+  .stat .lbl { font-size: 11px; color: #71717a; margin-top: 2px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; }
   
-  .btn-gen{width:100%;padding:12px;font-size:15px;font-weight:600;background:#4f46e5;border:none;border-radius:8px;cursor:pointer;color:#fff;margin-bottom:16px;transition:background 0.15s}
-  .btn-gen:hover{background:#4338ca}
-  .btn-gen:disabled{opacity:0.4;cursor:not-allowed}
+  .btn-gen {
+    width: 100%;
+    padding: 14px;
+    font-size: 14px;
+    font-weight: 600;
+    background: #6366f1;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    color: #fff;
+    margin-bottom: 1.5rem;
+    transition: all 0.2s;
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+  }
+  .btn-gen:hover:not(:disabled) {
+    background: #4f46e5;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(99, 102, 241, 0.4);
+  }
+  .btn-gen:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    box-shadow: none;
+  }
   
-  .code-area{display:none;background:#18181b;border:1px solid #3f3f46;border-radius:8px;padding:16px;margin-bottom:16px}
-  .code-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
-  .code-header span{font-size:13px;color:#a1a1aa}
-  .copy-btn{font-size:12px;padding:6px 14px;border:none;border-radius:6px;background:#3f3f46;cursor:pointer;color:#fff;transition:background 0.15s}
-  .copy-btn:hover{background:#52525b}
-  .code-area textarea{width:100%;height:220px;font-family:monospace;font-size:11px;resize:vertical;background:#09090b;color:#e4e4e7;border:1px solid #27272a;border-radius:6px;padding:8px}
-  #file-input{display:none}
-  .warning{font-size:12px;color:#fca5a5;background:#7f1d1d;border:1px solid #991b1b;border-radius:8px;padding:10px 14px;margin-bottom:16px;display:none}
-  .progress-bar { width: 100%; background: #27272a; border-radius: 4px; height: 8px; overflow: hidden; margin-bottom: 16px; display: none; }
+  .code-area {
+    display: none;
+    background: #18181b;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 1.5rem;
+  }
+  .code-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+  .code-header span { font-size: 12px; color: #a1a1aa; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; }
+  .copy-btn {
+    font-size: 12px;
+    padding: 6px 14px;
+    border: none;
+    border-radius: 6px;
+    background: #27272a;
+    cursor: pointer;
+    color: #fff;
+    font-weight: 500;
+    transition: background 0.2s;
+  }
+  .copy-btn:hover { background: #3f3f46; }
+  .code-area textarea {
+    width: 100%;
+    height: 240px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    resize: vertical;
+    background: #0f0f12;
+    color: #e4e4e7;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 8px;
+    padding: 12px;
+    outline: none;
+  }
+  #file-input { display: none; }
+  
+  .warning {
+    font-size: 12px;
+    color: #fca5a5;
+    background: rgba(127, 29, 29, 0.2);
+    border: 1px solid rgba(153, 27, 27, 0.4);
+    border-radius: 10px;
+    padding: 12px 16px;
+    margin-bottom: 1.5rem;
+    display: none;
+    font-weight: 500;
+  }
+  .progress-bar {
+    width: 100%;
+    background: #18181b;
+    border-radius: 6px;
+    height: 6px;
+    overflow: hidden;
+    margin-bottom: 1.5rem;
+    display: none;
+    border: 1px solid rgba(255, 255, 255, 0.04);
+  }
   .progress-fill { width: 0%; height: 100%; background: #10b981; transition: width 0.2s; }
 </style>
 </head>
@@ -121,8 +297,8 @@
   <h2>Lua GIF Generator - Transformice</h2>
 
   <div class="drop-zone" id="drop-zone">
-    <p id="drop-text">Upload or drop images here</p>
-    <p style="font-size:11px;margin-top:4px;color:#71717a">only .gif files</p>
+    <p id="drop-text">Clique ou arraste um arquivo <b>.gif</b> aqui</p>
+    <p style="font-size:11px;margin-top:6px;color:#71717a">only .gif files</p>
   </div>
   <input type="file" id="file-input" accept=".gif,image/gif">
 
@@ -168,12 +344,12 @@
   <div class="controls">
     <div class="ctrl-group">
       <label>Vampire</label>
-      <input type="text" id="player-name" value="" placeholder="Nickname#0000">
+      <input type="text" id="player-name" value="Nickname#0000" placeholder="Ex: Rato#0000">
     </div>
     <div class="ctrl-group">
       <label>Fixed</label>
-      <div class="toggle-container">
-        <span id="fixed-status-text" style="font-size:13px; font-weight:500; color:#fff;">false</span>
+      <div class="toggle-container" style="margin-top: 6px;">
+        <span id="fixed-status-text" style="font-size:13px; font-weight:600; color:#fff;">false</span>
         <label class="switch">
           <input type="checkbox" id="fixed-toggle">
           <span class="slider"></span>
@@ -189,7 +365,7 @@
     <div class="stat"><div class="num" id="st-rep">8</div><div class="lbl">Speed</div></div>
   </div>
 
-  <div class="warning" id="warning">Be careful, this code can make you lag or even disconnect</div>
+  <div class="warning" id="warning">⚠️ Muitos elementos detectados! Reduza a resolução interna para evitar lags ou desconexões no Transformice.</div>
 
   <button class="btn-gen" id="gen-btn" disabled>Generate Lua Code</button>
 
@@ -237,7 +413,7 @@ dropZone.addEventListener('drop', e => {
   if (f && (f.type === 'image/gif' || f.name.toLowerCase().endsWith('.gif'))) {
     loadGif(f);
   } else {
-    alert('only .gif files!');
+    alert('Por favor, envie apenas arquivos .gif!');
   }
 });
 fileInput.addEventListener('change', () => { 
@@ -328,7 +504,7 @@ async function loadGif(file) {
   } catch (err) {
     bar.style.display = 'none';
     console.error(err);
-    alert('error:\n\n' + err.message);
+    alert('Erro detalhado ao decodificar o GIF:\n\n' + err.message);
   }
 }
 
