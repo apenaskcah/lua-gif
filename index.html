@@ -329,13 +329,13 @@
   <div class="controls">
     <div class="ctrl-group">
       <label>Resolution X</label>
-      <input type="range" id="w-slider" min="5" max="400" value="200" step="1">
-      <div class="val" id="w-val">200 px</div>
+      <input type="range" id="w-slider" min="5" max="150" value="20" step="1">
+      <div class="val" id="w-val">20 px</div>
     </div>
     <div class="ctrl-group">
       <label>Resolution Y</label>
-      <input type="range" id="h-slider" min="5" max="300" value="100" step="1">
-      <div class="val" id="h-val">100 px</div>
+      <input type="range" id="h-slider" min="5" max="150" value="15" step="1">
+      <div class="val" id="h-val">15 px</div>
     </div>
   </div>
 
@@ -353,7 +353,7 @@
   <div class="controls">
     <div class="ctrl-group">
       <label>Vampire</label>
-      <input type="text" id="player-name" value="" placeholder="Nickname#0000">
+      <input type="text" id="player-name" value="" placeholder="Nickame#0000">
     </div>
     <div class="ctrl-group">
       <label>Fixed</label>
@@ -361,23 +361,6 @@
         <span id="fixed-status-text" style="font-size:13px; font-weight:600; color:#fff;">false</span>
         <label class="switch">
           <input type="checkbox" id="fixed-toggle">
-          <span class="slider"></span>
-        </label>
-      </div>
-    </div>
-  </div>
-
-  <div class="controls">
-    <div class="ctrl-group">
-      <label>Scale</label>
-      <input type="number" id="scale-input" value="1" min="1" step="1">
-    </div>
-    <div class="ctrl-group">
-      <label>Force color palette (optimized)</label>
-      <div class="toggle-container" style="margin-top: 6px;">
-        <span id="palette-status-text" style="font-size:13px; font-weight:600; color:#fff;">true</span>
-        <label class="switch">
-          <input type="checkbox" id="palette-toggle" checked>
           <span class="slider"></span>
         </label>
       </div>
@@ -397,7 +380,7 @@
 
   <div class="code-area" id="code-area">
     <div class="code-header">
-      <span id="code-title-label">Generated Lua Code</span>
+      <span>Generated Lua Code</span>
       <button class="copy-btn" id="copy-btn">Copy Code</button>
     </div>
     <textarea id="code-out" readonly></textarea>
@@ -424,15 +407,9 @@ const ctxPreview = previewCanvas.getContext('2d', { willReadFrequently: true });
 
 const fixedToggle = document.getElementById('fixed-toggle');
 const fixedStatusText = document.getElementById('fixed-status-text');
-const paletteToggle = document.getElementById('palette-toggle');
-const paletteStatusText = document.getElementById('palette-status-text');
 
 fixedToggle.addEventListener('change', () => {
   fixedStatusText.textContent = fixedToggle.checked ? 'true' : 'false';
-});
-
-paletteToggle.addEventListener('change', () => {
-  paletteStatusText.textContent = paletteToggle.checked ? 'true' : 'false';
 });
 
 dropZone.addEventListener('click', () => fileInput.click());
@@ -445,7 +422,7 @@ dropZone.addEventListener('drop', e => {
   if (f && (f.type === 'image/gif' || f.name.toLowerCase().endsWith('.gif'))) {
     loadGif(f);
   } else {
-    alert('please send an .gif file!');
+    alert('Por favor, envie apenas arquivos .gif!');
   }
 });
 fileInput.addEventListener('change', () => { 
@@ -454,99 +431,16 @@ fileInput.addEventListener('change', () => {
   }
 });
 
-const ci = {
-	red: "1856d77edec.png",
-	orange: "1856d827d2c.png",
-	yellow: "1856d8cd43d.png",
-	green: "1856d9b553f.png",
-	cyan: "185c1eb5e32.png",
-	blue: "185c22d4899.png",
-	purple: "185c23055d3.png",
-	pink: "185c2497037.png",
-	black: "17948da3319.png",
-	white: "17948da4a89.png"
-};
-
-const imgPalette = [
-    { id: ci.red, hex: "FF0000", r: 255, g: 0, b: 0 },
-    { id: ci.orange, hex: "FFA500", r: 255, g: 165, b: 0 },
-    { id: ci.yellow, hex: "FFFF00", r: 255, g: 255, b: 0 },
-    { id: ci.green, hex: "00FF00", r: 0, g: 255, b: 0 },
-    { id: ci.cyan, hex: "00FFFF", r: 0, g: 255, b: 255 },
-    { id: ci.blue, hex: "0000FF", r: 0, g: 0, b: 255 },
-    { id: ci.purple, hex: "800080", r: 128, g: 0, b: 128 },
-    { id: ci.pink, hex: "FFC0CB", r: 255, g: 192, b: 203 },
-    { id: ci.black, hex: "000000", r: 0, g: 0, b: 0 },
-    { id: ci.white, hex: "FFFFFF", r: 255, g: 255, b: 255 }
-];
-
-function colorDistance(r1, g1, b1, r2, g2, b2) {
-    return Math.sqrt(Math.pow(r1-r2, 2) + Math.pow(g1-g2, 2) + Math.pow(b1-b2, 2));
-}
-
-function getClosestPaletteColor(r, g, b) {
-    let closest = imgPalette[0];
-    let minDist = colorDistance(r, g, b, closest.r, closest.g, closest.b);
-    for (let i = 1; i < imgPalette.length; i++) {
-        let dist = colorDistance(r, g, b, imgPalette[i].r, imgPalette[i].g, imgPalette[i].b);
-        if (dist < minDist) {
-            minDist = dist;
-            closest = imgPalette[i];
-        }
-    }
-    return closest;
-}
-
-function getExactOrClosestPaletteImage(r, g, b, force) {
-    let closest = getClosestPaletteColor(r, g, b);
-    if (force) return closest;
-    
-    let distClosest = colorDistance(r, g, b, closest.r, closest.g, closest.b);
-    
-    // Se o tom mais próximo for preto ou branco, aplicamos a regra de ser 2x mais perto
-    if (closest.hex === "000000" || closest.hex === "FFFFFF") {
-        let secondClosestDist = Infinity;
-        for (let i = 0; i < imgPalette.length; i++) {
-            if (imgPalette[i].hex !== "000000" && imgPalette[i].hex !== "FFFFFF") {
-                let d = colorDistance(r, g, b, imgPalette[i].r, imgPalette[i].g, imgPalette[i].b);
-                if (d < secondClosestDist) secondClosestDist = d;
-            }
-        }
-        // Só aceita preto/branco se a distância for pelo menos 2x menor que a cor colorida mais próxima
-        if (distClosest * 2 > secondClosestDist) {
-            // Encontra a cor colorida mais próxima de fato
-            let bestColor = imgPalette[0];
-            let minD = Infinity;
-            for (let i = 0; i < imgPalette.length; i++) {
-                if (imgPalette[i].hex !== "000000" && imgPalette[i].hex !== "FFFFFF") {
-                    let d = colorDistance(r, g, b, imgPalette[i].r, imgPalette[i].g, imgPalette[i].b);
-                    if (d < minD) { minD = d; bestColor = imgPalette[i]; }
-                }
-            }
-            return bestColor;
-        }
-    }
-
-    if (distClosest < 25) {
-        return closest;
-    }
-    return null; 
-}
-
-function toHex(r, g, b) {
-  return ((r << 16) | (g << 8) | b).toString(16).padStart(6, '0');
-}
-
 function updateDimensionsBasedOnAspect(origW, origH) {
   if (!origW || !origH) return;
   const ratio = origW / origH;
-  let targetH = 100;
+  let targetH = Math.round(Math.sqrt(300 / ratio));
   let targetW = Math.round(targetH * ratio);
   
-  if (targetW > 200) {
-      targetW = 200;
-      targetH = Math.round(targetW / ratio);
-  }
+  if (targetW < 5) targetW = 5;
+  if (targetH < 5) targetH = 5;
+  if (targetW > 150) targetW = 150;
+  if (targetH > 150) targetH = 150;
 
   wSlider.value = targetW;
   hSlider.value = targetH;
@@ -619,7 +513,7 @@ async function loadGif(file) {
         videoFrame.close();
       }
     } else {
-      throw new Error("seu navegador não suporta decodificação multi-frame nativa.");
+      throw new Error("Seu navegador não suporta decodificação nativa de múltiplos frames. Atualize o Chrome ou Edge.");
     }
 
     fill.style.width = '100%';
@@ -637,7 +531,7 @@ async function loadGif(file) {
   } catch (err) {
     bar.style.display = 'none';
     console.error(err);
-    alert('error:\n\n' + err.message);
+    alert('Erro detalhado ao decodificar o GIF:\n\n' + err.message);
   }
 }
 
@@ -667,7 +561,12 @@ function startRightPreviewAnimation() {
   }, 1000 / 12);
 }
 
-function greedyMesh(frameRgba, srcW, srcH, targetW, targetH, thresh, forcePalette) {
+function toHex(r, g, b) {
+  return ((r << 16) | (g << 8) | b).toString(16).padStart(6, '0');
+}
+function colorKey(r, g, b) { return (r << 16) | (g << 8) | b; }
+
+function extractRectsFromFrame(frameRgba, srcW, srcH, targetW, targetH, thresh) {
   const tmpCanvas = document.createElement('canvas');
   tmpCanvas.width = targetW;
   tmpCanvas.height = targetH;
@@ -682,58 +581,28 @@ function greedyMesh(frameRgba, srcW, srcH, targetW, targetH, thresh, forcePalett
   tCtx.drawImage(bigCanvas, 0, 0, srcW, srcH, 0, 0, targetW, targetH);
   const smallPixels = tCtx.getImageData(0, 0, targetW, targetH).data;
 
-  let visited = new Uint8Array(targetW * targetH);
-  let rects = [];
-  let pixels = [];
+  const rects = [];
+  const W = targetW;
+  const H = targetH;
 
-  for (let i = 0; i < targetW * targetH; i++) {
-      let r = smallPixels[i*4], g = smallPixels[i*4+1], b = smallPixels[i*4+2], a = smallPixels[i*4+3];
-      if (a <= thresh) {
-          pixels.push(null);
-      } else {
-          let match = getExactOrClosestPaletteImage(r, g, b, forcePalette);
-          if (match) {
-              pixels.push({ hex: match.hex, imgId: match.id });
-          } else {
-              let hex = toHex(r, g, b);
-              pixels.push({ hex: hex, imgId: null });
-          }
+  for (let y = 0; y < H; y++) {
+    let x = 0;
+    while (x < W) {
+      const idx = (y * W + x) * 4;
+      const a = smallPixels[idx+3];
+      if (a <= thresh) { x++; continue; }
+      const r = smallPixels[idx], g = smallPixels[idx+1], b = smallPixels[idx+2];
+      const key = colorKey(r, g, b);
+      let x2 = x + 1;
+      while (x2 < W) {
+        const i2 = (y * W + x2) * 4;
+        if (smallPixels[i2+3] <= thresh) break;
+        if (colorKey(smallPixels[i2], smallPixels[i2+1], smallPixels[i2+2]) !== key) break;
+        x2++;
       }
-  }
-
-  for (let y = 0; y < targetH; y++) {
-      for (let x = 0; x < targetW; x++) {
-          let p = pixels[y * targetW + x];
-          if (!p || visited[y * targetW + x]) continue;
-
-          let w = 1;
-          while (x + w < targetW) {
-              let np = pixels[y * targetW + x + w];
-              if (!np || visited[y * targetW + x + w] || np.hex !== p.hex) break;
-              w++;
-          }
-
-          let h = 1;
-          let canExpandDown = true;
-          while (y + h < targetH && canExpandDown) {
-              for (let i = 0; i < w; i++) {
-                  let np = pixels[(y + h) * targetW + x + i];
-                  if (!np || visited[(y + h) * targetW + x + i] || np.hex !== p.hex) {
-                      canExpandDown = false;
-                      break;
-                  }
-              }
-              if (canExpandDown) h++;
-          }
-
-          for (let dy = 0; dy < h; dy++) {
-              for (let dx = 0; dx < w; dx++) {
-                  visited[(y + dy) * targetW + x + dx] = 1;
-              }
-          }
-
-          rects.push({ x, y, w, h, hex: p.hex, imgId: p.imgId });
-      }
+      rects.push({ x, y, w: x2 - x, h: 1, r, g, b });
+      x = x2;
+    }
   }
   return rects;
 }
@@ -741,129 +610,76 @@ function greedyMesh(frameRgba, srcW, srcH, targetW, targetH, thresh, forcePalett
 function processAndGenerateLua() {
   if (gifFramesData.length === 0) return;
 
-  genBtn.disabled = true;
-  genBtn.textContent = "Processando Frames...";
+  const targetW = parseInt(wSlider.value);
+  const targetH = parseInt(hSlider.value);
+  const offsetX = parseInt(document.getElementById('offset-x').value) || 0;
+  const offsetY = parseInt(document.getElementById('offset-y').value) || 0;
+  const playerName = document.getElementById('player-name').value.trim() || "Nickname#0000";
+  const isFixed = fixedToggle.checked ? 'true' : 'false';
+  const thresh = 10; 
 
-  setTimeout(() => {
-    const targetW = parseInt(wSlider.value);
-    const targetH = parseInt(hSlider.value);
-    const offsetX = parseInt(document.getElementById('offset-x').value) || 0;
-    const offsetY = parseInt(document.getElementById('offset-y').value) || 0;
-    const scale = parseInt(document.getElementById('scale-input').value) || 1;
-    const forcePalette = paletteToggle.checked;
-    const playerName = document.getElementById('player-name').value.trim() || "Nickname#0000";
-    const isFixed = fixedToggle.checked ? 'true' : 'false';
-    const thresh = 10; 
+  const scaleX = 800 / targetW;
+  const scaleY = 400 / targetH;
 
-    const maxW = 800;
-    const maxH = 400;
-    const aspectRatio = targetW / targetH;
-    
-    let renderW = maxW;
-    let renderH = maxW / aspectRatio;
-    
-    if (renderH > maxH) {
-      renderH = maxH;
-      renderW = maxH * aspectRatio;
+  let totalBlocksMax = 0;
+  const luaLines = [];
+  
+  luaLines.push('-- made by Kcah#2475 & G484#5825');
+  luaLines.push('tfm.exec.disableAutoNewGame(true)');
+  luaLines.push('');
+
+  let framesString = 'local frames = {';
+  for (let i = 0; i < gifFramesData.length; i++) {
+    const frame = gifFramesData[i];
+    const rects = extractRectsFromFrame(frame.data, frame.width, frame.height, targetW, targetH, thresh);
+    if (rects.length > totalBlocksMax) totalBlocksMax = rects.length;
+
+    framesString += '{';
+    for (let r = 0; r < rects.length; r++) {
+      const rc = rects[r];
+      const hex = toHex(rc.r, rc.g, rc.b);
+      const finalX = Math.floor(offsetX + (rc.x * scaleX));
+      const finalY = Math.floor(offsetY + (rc.y * scaleY));
+      const finalW = Math.ceil(rc.w * scaleX);
+      const finalH = Math.ceil(rc.h * scaleY);
+
+      framesString += `{${finalX},${finalY},${finalW},${finalH},0x${hex}},`;
     }
+    framesString += '},';
+  }
+  framesString += '}';
 
-    const scaleX = (renderW / targetW) * scale;
-    const scaleY = (renderH / targetH) * scale;
+  luaLines.push(framesString);
+  luaLines.push('');
+  luaLines.push('local function desenharTela(id)');
+  luaLines.push('    local currentFrame = frames[id + 1]');
+  luaLines.push('    if not currentFrame then return end');
+  luaLines.push('    for i = 1, #currentFrame do');
+  luaLines.push('        local rect = currentFrame[i]');
+  luaLines.push('        ui.addTextArea(i, "", nil, rect[1], rect[2], rect[3], rect[4], rect[5], rect[5], 1, ' + isFixed + ')');
+  luaLines.push('    end');
+  luaLines.push('end');
+  luaLines.push('');
+  luaLines.push('local id = 0');
+  luaLines.push('tfm.exec.setVampirePlayer("' + playerName + '", true)');
+  luaLines.push('local time = os.time()');
+  luaLines.push('');
+  luaLines.push('eventPlayerVampire = function(name)');
+  luaLines.push('    tfm.exec.setVampirePlayer(name, false)');
+  luaLines.push('    if name == "' + playerName + '" then');
+  luaLines.push('        tfm.exec.setVampirePlayer(name, true)');
+  luaLines.push('        if os.time() > time then');
+  luaLines.push('            time = os.time() + 1000 / ' + (typeof detectedRef !== 'undefined' ? detectedRef : 8));
+  luaLines.push('            desenharTela(id)');
+  luaLines.push('            id = (id + 1) % #' + 'frames');
+  luaLines.push('        end');
+  luaLines.push('    end');
+  luaLines.push('end');
 
-    let totalBlocksMax = 0;
-    const luaLines = [];
-    
-    luaLines.push('-- made by Kcah#2475 & G484#5825');
-    luaLines.push('tfm.exec.disableAutoNewGame(true)');
-    luaLines.push('local activeImages = {}');
-    luaLines.push('');
-    luaLines.push('local function limparImagens()');
-    luaLines.push('    for _, idImg in ipairs(activeImages) do');
-    luaLines.push('        tfm.exec.removeImage(idImg)');
-    luaLines.push('    end');
-    luaLines.push('    activeImages = {}');
-    luaLines.push('end');
-    luaLines.push('');
-    luaLines.push('local function desenharTela(id)');
-    luaLines.push('    limparImagens()');
-
-    for (let i = 0; i < gifFramesData.length; i++) {
-      const frame = gifFramesData[i];
-      const rects = greedyMesh(frame.data, frame.width, frame.height, targetW, targetH, thresh, forcePalette);
-      if (rects.length > totalBlocksMax) totalBlocksMax = rects.length;
-
-      if (i === 0) {
-        luaLines.push('  if id == 0 then');
-      } else {
-        luaLines.push('  elseif id == ' + i + ' then');
-      }
-
-      let imageGroups = {};
-      let textAreas = [];
-
-      for (let r = 0; r < rects.length; r++) {
-        const rc = rects[r];
-        const finalX = Math.floor(offsetX + (rc.x * scaleX));
-        const finalY = Math.floor(offsetY + (rc.y * scaleX));
-        const finalW = Math.ceil(rc.w * scaleX);
-        const finalH = Math.ceil(rc.h * scaleY);
-
-        if (rc.imgId) {
-          if (!imageGroups[rc.imgId]) imageGroups[rc.imgId] = [];
-          imageGroups[rc.imgId].push('{' + finalX + ',' + finalY + ',' + finalW + ',' + finalH + '}');
-        } else {
-          textAreas.push('{' + finalX + ',' + finalY + ',' + finalW + ',' + finalH + ',0x' + rc.hex + '}');
-        }
-      }
-
-      if (Object.keys(imageGroups).length > 0) {
-        luaLines.push('    for imgId, data in pairs({');
-        for (let imgId in imageGroups) {
-          luaLines.push('      ["' + imgId + '"] = {' + imageGroups[imgId].join(",") + '},');
-        }
-        luaLines.push('    }) do');
-        luaLines.push('      for _, r in ipairs(data) do');
-        let imgLayer = isFixed === 'true' ? '"%1"' : '"!1"';
-        luaLines.push('        table.insert(activeImages, tfm.exec.addImage(imgId, ' + imgLayer + ', r[1], r[2], nil, r[3], r[4], 0, 1, 0, 0))');
-        luaLines.push('      end');
-        luaLines.push('    end');
-      }
-
-      if (textAreas.length > 0) {
-        luaLines.push('    for _, r in ipairs({' + textAreas.join(",") + '}) do');
-        luaLines.push('      ui.addTextArea(0, "", nil, r[1], r[2], r[3], r[4], r[5], r[5], 1, ' + isFixed + ')');
-        luaLines.push('    end');
-      }
-    }
-
-    luaLines.push('  end');
-    luaLines.push('end');
-    luaLines.push('');
-    luaLines.push('local id = 0');
-    luaLines.push('tfm.exec.setVampirePlayer("' + playerName + '", true)');
-    luaLines.push('local time = os.time()');
-    luaLines.push('');
-    luaLines.push('eventPlayerVampire = function(name)');
-    luaLines.push('    tfm.exec.setVampirePlayer(name, false)');
-    luaLines.push('    if name == "' + playerName + '" then');
-    luaLines.push('        tfm.exec.setVampirePlayer(name, true)');
-    luaLines.push('        if os.time() > time then');
-    luaLines.push('            time = os.time() + (1000 / (' + detectedRef + ' * 2))');
-    luaLines.push('            desenharTela(id)');
-    luaLines.push('            id = (id + 1) % ' + gifFramesData.length);
-    luaLines.push('        end');
-    luaLines.push('    end');
-    luaLines.push('end');
-
-    codeOut.value = luaLines.join('\n');
-    document.getElementById('code-title-label').textContent = 'Generated Lua Code (' + totalBlocksMax + ')';
-    document.getElementById('code-area').style.display = 'block';
-    document.getElementById('warning').style.display = totalBlocksMax > 500 ? 'block' : 'none';
-    codeOut.scrollTop = 0;
-
-    genBtn.disabled = false;
-    genBtn.textContent = "Generate Lua Code";
-  }, 50);
+  codeOut.value = luaLines.join('\n');
+  document.getElementById('code-area').style.display = 'block';
+  document.getElementById('warning').style.display = totalBlocksMax > 500 ? 'block' : 'none';
+  codeOut.scrollTop = 0;
 }
 </script>
 </body>
