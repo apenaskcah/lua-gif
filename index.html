@@ -621,24 +621,29 @@ function processAndGenerateLua() {
   const isFixed = fixedToggle.checked ? 'true' : 'false';
   const thresh = 10; 
 
-  const scaleX = 800 / targetW;
-  const scaleY = 400 / targetH;
+  const baseScale = Math.min(800 / targetW, 400 / targetH);
+  const scaleX = baseScale;
+  const scaleY = baseScale;
 
   let totalBlocksMax = 0;
   const luaLines = [];
   
-  luaLines.push('-- made by Kcah#2475 & G484#5825 (Optimized Table Version)');
+  luaLines.push('-- made by Kcah#2475 & G484#5825');
   luaLines.push('tfm.exec.disableAutoNewGame(true)');
   luaLines.push('');
+  luaLines.push('local function desenharTela(id)');
 
-  // Monta a tabela de frames inteira em uma única linha
-  let framesString = 'local frames = {';
   for (let i = 0; i < gifFramesData.length; i++) {
     const frame = gifFramesData[i];
     const rects = extractRectsFromFrame(frame.data, frame.width, frame.height, targetW, targetH, thresh);
     if (rects.length > totalBlocksMax) totalBlocksMax = rects.length;
 
-    framesString += '{';
+    if (i === 0) {
+      luaLines.push('  if id == 0 then');
+    } else {
+      luaLines.push('  elseif id == ' + i + ' then');
+    }
+
     for (let r = 0; r < rects.length; r++) {
       const rc = rects[r];
       const hex = toHex(rc.r, rc.g, rc.b);
@@ -647,21 +652,11 @@ function processAndGenerateLua() {
       const finalW = Math.ceil(rc.w * scaleX);
       const finalH = Math.ceil(rc.h * scaleY);
 
-      framesString += `{${finalX},${finalY},${finalW},${finalH},0x${hex}},`;
+      luaLines.push('    ui.addTextArea(' + r + ', "", nil, ' + finalX + ', ' + finalY + ', ' + finalW + ', ' + finalH + ', 0x' + hex + ', 0x' + hex + ', 1, ' + isFixed + ')');
     }
-    framesString += '},';
   }
-  framesString += '}';
 
-  luaLines.push(framesString);
-  luaLines.push('');
-  luaLines.push('local function desenharTela(id)');
-  luaLines.push('    local currentFrame = frames[id + 1]');
-  luaLines.push('    if not currentFrame then return end');
-  luaLines.push('    for i = 1, #currentFrame do');
-  luaLines.push('        local rect = currentFrame[i]');
-  luaLines.push('        ui.addTextArea(i, "", nil, rect[1], rect[2], rect[3], rect[4], rect[5], rect[5], 1, ' + isFixed + ')');
-  luaLines.push('    end');
+  luaLines.push('  end');
   luaLines.push('end');
   luaLines.push('');
   luaLines.push('local id = 0');
@@ -675,7 +670,10 @@ function processAndGenerateLua() {
   luaLines.push('        if os.time() > time then');
   luaLines.push('            time = os.time() + 1000 / ' + (typeof detectedRef !== 'undefined' ? detectedRef : 8));
   luaLines.push('            desenharTela(id)');
-  luaLines.push('            id = (id + 1) % #' + 'frames');
+  luaLines.push('            id = id + 1');
+  luaLines.push('            if id >= ' + gifFramesData.length + ' then');
+  luaLines.push('                id = 0');
+  luaLines.push('            end');
   luaLines.push('        end');
   luaLines.push('    end');
   luaLines.push('end');
