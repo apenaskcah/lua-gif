@@ -121,7 +121,7 @@
   <h2>Lua GIF Generator - Transformice</h2>
 
   <div class="drop-zone" id="drop-zone">
-    <p id="drop-text">Select GIF</p>
+    <p id="drop-text">Clique ou arraste um arquivo <b>.gif</b> aqui</p>
     <p style="font-size:11px;margin-top:4px;color:#71717a">only .gif files</p>
   </div>
   <input type="file" id="file-input" accept=".gif,image/gif">
@@ -453,21 +453,18 @@ function processAndGenerateLua() {
   luaLines.push('end');
   luaLines.push('');
   luaLines.push('local id = 0');
-  luaLines.push('local totalFrames = ' + gifFramesData.length);
-  luaLines.push('local vamp = "' + playerName + '"');
-  luaLines.push('local rep = ' + (typeof detectedRef !== 'undefined' ? detectedRef : 8));
-  luaLines.push('tfm.exec.setVampirePlayer(vamp, true)');
+  luaLines.push('tfm.exec.setVampirePlayer("' + playerName + '", true)');
   luaLines.push('local time = os.time()');
   luaLines.push('');
   luaLines.push('eventPlayerVampire = function(name)');
   luaLines.push('    tfm.exec.setVampirePlayer(name, false)');
-  luaLines.push('    if name == vamp then');
+  luaLines.push('    if name == "' + playerName + '" then');
   luaLines.push('        tfm.exec.setVampirePlayer(name, true)');
   luaLines.push('        if os.time() > time then');
-  luaLines.push('            time = os.time() + 1000 / rep');
+  luaLines.push('            time = os.time() + 1000 / ' + (typeof detectedRef !== 'undefined' ? detectedRef : 8));
   luaLines.push('            desenharTela(id)');
   luaLines.push('            id = id + 1');
-  luaLines.push('            if id >= totalFrames then');
+  luaLines.push('            if id >= ' + gifFramesData.length + ' then');
   luaLines.push('                id = 0');
   luaLines.push('            end');
   luaLines.push('        end');
