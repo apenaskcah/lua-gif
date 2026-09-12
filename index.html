@@ -121,7 +121,7 @@
   <h2>Lua GIF Generator - Transformice</h2>
 
   <div class="drop-zone" id="drop-zone">
-    <p id="drop-text">Clique ou arraste um arquivo <b>.gif</b> aqui</p>
+    <p id="drop-text">Upload or drop images here</p>
     <p style="font-size:11px;margin-top:4px;color:#71717a">only .gif files</p>
   </div>
   <input type="file" id="file-input" accept=".gif,image/gif">
@@ -189,7 +189,7 @@
     <div class="stat"><div class="num" id="st-rep">8</div><div class="lbl">Speed</div></div>
   </div>
 
-  <div class="warning" id="warning">⚠️ Muitos elementos detectados! Reduza a resolução interna para evitar lags ou desconexões no Transformice.</div>
+  <div class="warning" id="warning">Be careful, this code can make you lag or even disconnect</div>
 
   <button class="btn-gen" id="gen-btn" disabled>Generate Lua Code</button>
 
@@ -237,7 +237,7 @@ dropZone.addEventListener('drop', e => {
   if (f && (f.type === 'image/gif' || f.name.toLowerCase().endsWith('.gif'))) {
     loadGif(f);
   } else {
-    alert('Only .gif files!');
+    alert('only .gif files!');
   }
 });
 fileInput.addEventListener('change', () => { 
@@ -328,7 +328,7 @@ async function loadGif(file) {
   } catch (err) {
     bar.style.display = 'none';
     console.error(err);
-    alert('Erro detalhado ao decodificar o GIF:\n\n' + err.message);
+    alert('error:\n\n' + err.message);
   }
 }
 
