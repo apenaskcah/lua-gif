@@ -2,8 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<title>Gerador de GIF Animado em Lua para Transformice</title>
-<script src="https://cdn.jsdelivr.net/npm/gifuct-js@2.1.3/dist/gifuct-js.min.js"></script>
+<title>Lua GIF Generator - Transformice</title>
 <style>
   *{box-sizing:border-box;margin:0;padding:0}
   body {
@@ -69,7 +68,6 @@
   input[type=range] { width: 100%; accent-color: #6366f1; }
   input[type=number], input[type=text] { width: 100%; padding: 8px; background: #27272a; border: 1px solid #3f3f46; color: #fff; border-radius: 6px; font-size: 13px; }
   
-  /* Toggle Switch para o Fixed */
   .toggle-container {
     display: flex;
     align-items: center;
@@ -120,24 +118,23 @@
 </head>
 <body>
 <div class="wrap">
-  <h2>Gerador de GIF Animado (800x400) — Transformice</h2>
-  <p class="sub">Converta arquivos .gif em scripts Lua animados otimizados com TextAreas.</p>
+  <h2>Lua GIF Generator - Transformice</h2>
 
   <div class="drop-zone" id="drop-zone">
-    <p id="drop-text">Clique ou arraste um arquivo <b>.gif</b> aqui</p>
-    <p style="font-size:11px;margin-top:4px;color:#71717a">Apenas arquivos GIF são aceitos</p>
+    <p id="drop-text">Select GIF</p>
+    <p style="font-size:11px;margin-top:4px;color:#71717a">only .gif files</p>
   </div>
   <input type="file" id="file-input" accept=".gif,image/gif">
 
   <div class="preview-grid" id="preview-grid">
     <div class="preview-box">
-      <h3>GIF Original (Esquerda)</h3>
+      <h3>Original GIF</h3>
       <div class="canvas-wrap">
         <img id="img-original" alt="Original">
       </div>
     </div>
     <div class="preview-box">
-      <h3>Resolução Editada (Direita)</h3>
+      <h3>Preview</h3>
       <div class="canvas-wrap">
         <canvas id="canvas-preview"></canvas>
       </div>
@@ -188,30 +185,28 @@
   <div class="progress-bar" id="prog-bar"><div class="progress-fill" id="prog-fill"></div></div>
 
   <div class="stats" id="stats" style="display:none">
-    <div class="stat"><div class="num" id="st-frames">0</div><div class="lbl">Frames Detectados</div></div>
-    <div class="stat"><div class="num" id="st-rep">8</div><div class="lbl">Velocidade (rep)</div></div>
-    <div class="stat"><div class="num" id="st-blocks">0</div><div class="lbl">Máx. Blocos por Frame</div></div>
+    <div class="stat"><div class="num" id="st-frames">0</div><div class="lbl">Frames Detected</div></div>
+    <div class="stat"><div class="num" id="st-rep">8</div><div class="lbl">Speed</div></div>
   </div>
 
   <div class="warning" id="warning">⚠️ Muitos elementos detectados! Reduza a resolução interna para evitar lags ou desconexões no Transformice.</div>
 
-  <button class="btn-gen" id="gen-btn" disabled>Gerar Código Lua Animado</button>
+  <button class="btn-gen" id="gen-btn" disabled>Generate Lua Code</button>
 
   <div class="code-area" id="code-area">
     <div class="code-header">
-      <span id="code-label">Código Lua gerado</span>
-      <button class="copy-btn" id="copy-btn">Copiar Código</button>
+      <span>Generated Lua Code</span>
+      <button class="copy-btn" id="copy-btn">Copy Code</button>
     </div>
     <textarea id="code-out" readonly></textarea>
   </div>
 </div>
 
-<canvas id="work-canvas" style="display:none;"></canvas>
-
 <script>
 let gifFramesData = []; 
 let detectedRep = 8;
 let originalFileUrl = null;
+let animInterval = null;
 
 const dropZone = document.getElementById('drop-zone');
 const fileInput = document.getElementById('file-input');
@@ -221,8 +216,6 @@ const wVal = document.getElementById('w-val');
 const hVal = document.getElementById('h-val');
 const genBtn = document.getElementById('gen-btn');
 const codeOut = document.getElementById('code-out');
-const workCanvas = document.getElementById('work-canvas');
-const ctxWork = workCanvas.getContext('2d', { willReadFrequently: true });
 
 const previewCanvas = document.getElementById('canvas-preview');
 const ctxPreview = previewCanvas.getContext('2d', { willReadFrequently: true });
@@ -255,18 +248,16 @@ fileInput.addEventListener('change', () => {
 
 wSlider.addEventListener('input', () => { 
   wVal.textContent = wSlider.value + ' px'; 
-  updateRightPreview();
 });
 hSlider.addEventListener('input', () => { 
   hVal.textContent = hSlider.value + ' px'; 
-  updateRightPreview();
 });
 
 document.getElementById('copy-btn').addEventListener('click', () => {
   navigator.clipboard.writeText(codeOut.value).then(() => {
     const b = document.getElementById('copy-btn');
-    b.textContent = '✓ Copiado!';
-    setTimeout(() => { b.textContent = 'Copiar Código'; }, 2000);
+    b.textContent = '✓ Copied!';
+    setTimeout(() => { b.textContent = 'Copy Code'; }, 2000);
   });
 });
 
@@ -285,58 +276,41 @@ async function loadGif(file) {
   const bar = document.getElementById('prog-bar');
   const fill = document.getElementById('prog-fill');
   bar.style.display = 'block';
-  fill.style.width = '30%';
+  fill.style.width = '40%';
 
   try {
-    if (typeof gifuct === 'undefined') {
-      throw new Error("A biblioteca gifuct-js não foi carregada (verifique sua conexão com a internet).");
-    }
+    if (window.ImageDecoder) {
+      const decoder = new ImageDecoder({ data: file.stream(), type: 'image/gif' });
+      await decoder.tracks.ready;
+      const frameCount = decoder.tracks.selectedTrack.frameCount;
+      gifFramesData = [];
 
-    const buffer = await file.arrayBuffer();
-    fill.style.width = '50%';
-    
-    const gif = gifuct.parseGIF(buffer);
-    const frames = gifuct.decompressFrames(gif, true);
-    
-    fill.style.width = '80%';
-    gifFramesData = [];
+      const tempCanvas = document.createElement('canvas');
+      const tCtx = tempCanvas.getContext('2d', { willReadFrequently: true });
 
-    const canvas = document.createElement('canvas');
-    canvas.width = gif.lsd.width;
-    canvas.height = gif.lsd.height;
-    const ctx = canvas.getContext('2d', { willReadFrequently: true });
-    
-    let imamData = ctx.createImageData(canvas.width, canvas.height);
-
-    for (let i = 0; i < frames.length; i++) {
-      const frame = frames[i];
-      const patchData = new Uint8ClampedArray(frame.patch);
-      
-      for (let y = 0; y < frame.dims.height; y++) {
-        for (let x = 0; x < frame.dims.width; x++) {
-          const srcIdx = (y * frame.dims.width + x) * 4;
-          const targetX = frame.dims.left + x;
-          const targetY = frame.dims.top + y;
-          if (targetX < canvas.width && targetY < canvas.height) {
-            const destIdx = (targetY * canvas.width + targetX) * 4;
-            if (patchData[srcIdx + 3] > 0) {
-              imamData.data[destIdx] = patchData[srcIdx];
-              imamData.data[destIdx + 1] = patchData[srcIdx + 1];
-              imamData.data[destIdx + 2] = patchData[srcIdx + 2];
-              imamData.data[destIdx + 3] = patchData[srcIdx + 3];
-            }
-          }
+      for (let i = 0; i < frameCount; i++) {
+        const frameResult = await decoder.decode({ frameIndex: i });
+        const videoFrame = frameResult.image;
+        
+        if (i === 0) {
+          tempCanvas.width = videoFrame.codedWidth;
+          tempCanvas.height = videoFrame.codedHeight;
         }
+
+        tCtx.clearRect(0, 0, tempCanvas.width, tempCanvas.height);
+        tCtx.drawImage(videoFrame, 0, 0);
+        const imgData = tCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
+
+        gifFramesData.push({
+          data: new Uint8ClampedArray(imgData.data),
+          width: tempCanvas.width,
+          height: tempCanvas.height
+        });
+        
+        videoFrame.close();
       }
-
-      ctx.putImageData(imamData, 0, 0);
-      const frameRgba = ctx.getImageData(0, 0, canvas.width, canvas.height);
-
-      gifFramesData.push({
-        data: new Uint8ClampedArray(frameRgba.data),
-        width: canvas.width,
-        height: canvas.height
-      });
+    } else {
+      throw new Error("Seu navegador não suporta decodificação nativa de múltiplos frames. Atualize o Chrome ou Edge.");
     }
 
     fill.style.width = '100%';
@@ -349,32 +323,39 @@ async function loadGif(file) {
     document.getElementById('stats').style.display = 'flex';
     genBtn.disabled = false;
 
-    updateRightPreview();
+    startRightPreviewAnimation();
 
   } catch (err) {
     bar.style.display = 'none';
     console.error(err);
-    alert('Erro detalhado ao decodificar o GIF:\n\n' + err.message + '\n\n(Copie esta mensagem se persistir)');
+    alert('Erro detalhado ao decodificar o GIF:\n\n' + err.message);
   }
 }
 
-function updateRightPreview() {
-  if (gifFramesData.length === 0) return;
-  const targetW = parseInt(wSlider.value);
-  const targetH = parseInt(hSlider.value);
-  
-  previewCanvas.width = targetW;
-  previewCanvas.height = targetH;
-  ctxPreview.imageSmoothingEnabled = false;
+function startRightPreviewAnimation() {
+  if (animInterval) clearInterval(animInterval);
+  let currentPreviewFrame = 0;
 
-  const firstFrame = gifFramesData[0];
-  const bigCanvas = document.createElement('canvas');
-  bigCanvas.width = firstFrame.width;
-  bigCanvas.height = firstFrame.height;
-  bigCanvas.getContext('2d').putImageData(new ImageData(firstFrame.data, firstFrame.width, firstFrame.height), 0, 0);
+  animInterval = setInterval(() => {
+    if (gifFramesData.length === 0) return;
+    const targetW = parseInt(wSlider.value);
+    const targetH = parseInt(hSlider.value);
+    
+    previewCanvas.width = targetW;
+    previewCanvas.height = targetH;
+    ctxPreview.imageSmoothingEnabled = false;
 
-  ctxPreview.clearRect(0, 0, targetW, targetH);
-  ctxPreview.drawImage(bigCanvas, 0, 0, firstFrame.width, firstFrame.height, 0, 0, targetW, targetH);
+    const frame = gifFramesData[currentPreviewFrame];
+    const bigCanvas = document.createElement('canvas');
+    bigCanvas.width = frame.width;
+    bigCanvas.height = frame.height;
+    bigCanvas.getContext('2d').putImageData(new ImageData(frame.data, frame.width, frame.height), 0, 0);
+
+    ctxPreview.clearRect(0, 0, targetW, targetH);
+    ctxPreview.drawImage(bigCanvas, 0, 0, frame.width, frame.height, 0, 0, targetW, targetH);
+
+    currentPreviewFrame = (currentPreviewFrame + 1) % gifFramesData.length;
+  }, 1000 / 12);
 }
 
 function toHex(r, g, b) {
@@ -440,8 +421,8 @@ function processAndGenerateLua() {
   let totalBlocksMax = 0;
   const luaLines = [];
   
-  luaLines.push('-- GIF Animado em Tela Cheia (800x400) para Transformice');
-  luaLines.push('-- Gerado automaticamente');
+  luaLines.push('-- made by Kcah#2475 & G484#5825');
+  luaLines.push('tfm.exec.disableAutoNewGame(true)');
   luaLines.push('');
   luaLines.push('local function desenharTela(id)');
 
@@ -496,7 +477,6 @@ function processAndGenerateLua() {
   codeOut.value = luaLines.join('\n');
   document.getElementById('code-area').style.display = 'block';
   document.getElementById('st-blocks').textContent = totalBlocksMax;
-  document.getElementById('code-label').textContent = 'Código Lua gerado (' + gifFramesData.length + ' frames, máx ' + totalBlocksMax + ' blocos)';
   document.getElementById('warning').style.display = totalBlocksMax > 500 ? 'block' : 'none';
   codeOut.scrollTop = 0;
 }
