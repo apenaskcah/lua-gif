@@ -630,15 +630,15 @@ function processAndGenerateLua() {
   luaLines.push('-- made by Kcah#2475 & G484#5825 (Optimized Table Version)');
   luaLines.push('tfm.exec.disableAutoNewGame(true)');
   luaLines.push('');
-  luaLines.push('-- Tabela contendo todos os frames e seus retângulos {x, y, w, h, cor}');
-  luaLines.push('local frames = {');
 
+  // Monta a tabela de frames inteira em uma única linha
+  let framesString = 'local frames = {';
   for (let i = 0; i < gifFramesData.length; i++) {
     const frame = gifFramesData[i];
     const rects = extractRectsFromFrame(frame.data, frame.width, frame.height, targetW, targetH, thresh);
     if (rects.length > totalBlocksMax) totalBlocksMax = rects.length;
 
-    luaLines.push(`    { -- Frame ${i}`);
+    framesString += '{';
     for (let r = 0; r < rects.length; r++) {
       const rc = rects[r];
       const hex = toHex(rc.r, rc.g, rc.b);
@@ -647,12 +647,13 @@ function processAndGenerateLua() {
       const finalW = Math.ceil(rc.w * scaleX);
       const finalH = Math.ceil(rc.h * scaleY);
 
-      luaLines.push(`        {${finalX}, ${finalY}, ${finalW}, ${finalH}, 0x${hex}},`);
+      framesString += `{${finalX},${finalY},${finalW},${finalH},0x${hex}},`;
     }
-    luaLines.push('    },');
+    framesString += '},';
   }
+  framesString += '}';
 
-  luaLines.push('}');
+  luaLines.push(framesString);
   luaLines.push('');
   luaLines.push('local function desenharTela(id)');
   luaLines.push('    local currentFrame = frames[id + 1]');
