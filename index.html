@@ -353,7 +353,7 @@
   <div class="controls">
     <div class="ctrl-group">
       <label>Vampire</label>
-      <input type="text" id="player-name" value="" placeholder="Nickame#0000">
+      <input type="text" id="player-name" value="" placeholder="Nickname#0000">
     </div>
     <div class="ctrl-group">
       <label>Fixed</label>
@@ -367,20 +367,33 @@
     </div>
   </div>
 
-  <div class="progress-bar" id="prog-bar"><div class="progress-fill" id="prog-fill"></div></div>
-
-  <div class="stats" id="stats" style="display:none">
-    <div class="stat"><div class="num" id="st-frames">0</div><div class="lbl">Frames Detected</div></div>
-    <div class="stat"><div class="num" id="st-rep">8</div><div class="lbl">Speed</div></div>
+  <div class="controls">
+    <div class="ctrl-group">
+      <label>Scale</label>
+      <input type="number" id="scale-input" value="1" min="0.1" step="0.1" style="margin-top: 4px;">
+    </div>
+    <div class="ctrl-group">
+      <label>Speed</label>
+      <input type="number" id="speed-input" value="8" min="1" max="60" placeholder="8" style="margin-top: 4px;">
+    </div>
   </div>
 
-  <div class="warning" id="warning">⚠️ Muitos elementos detectados! Reduza a resolução interna para evitar lags ou desconexões no Transformice.</div>
+  <div class="controls" style="grid-template-columns: 1fr; margin-bottom: 1.5rem;">
+    <div class="ctrl-group">
+      <label>Frames detected</label>
+      <div class="val" id="st-frames" style="margin-top: 6px; font-size: 18px;">0</div>
+    </div>
+  </div>
+
+  <div class="progress-bar" id="prog-bar"><div class="progress-fill" id="prog-fill"></div></div>
+
+  <div class="warning" id="warning">This speed combined with this resolution can cause a lot of lag. Reducing them is recommended.</div>
 
   <button class="btn-gen" id="btn-gen" disabled>Generate Lua Code</button>
 
   <div class="code-area" id="code-area">
     <div class="code-header">
-      <span>Generated Lua Code</span>
+      <span id="code-title-label">Generated Lua Code</span>
       <button class="copy-btn" id="copy-btn">Copy Code</button>
     </div>
     <textarea id="code-out" readonly></textarea>
@@ -389,9 +402,10 @@
 
 <script>
 let gifFramesData = []; 
-let detectedRep = 8;
+let frameDelays = [];
+let detectedRef = 8;
 let originalFileUrl = null;
-let animInterval = null;
+let animTimeout = null;
 
 const dropZone = document.getElementById('drop-zone');
 const fileInput = document.getElementById('file-input');
@@ -401,6 +415,10 @@ const wVal = document.getElementById('w-val');
 const hVal = document.getElementById('h-val');
 const genBtn = document.getElementById('btn-gen');
 const codeOut = document.getElementById('code-out');
+const speedInput = document.getElementById('speed-input');
+const scaleInput = document.getElementById('scale-input');
+const codeTitleLabel = document.getElementById('code-title-label');
+const stFrames = document.getElementById('st-frames');
 
 const previewCanvas = document.getElementById('canvas-preview');
 const ctxPreview = previewCanvas.getContext('2d', { willReadFrequently: true });
@@ -422,7 +440,7 @@ dropZone.addEventListener('drop', e => {
   if (f && (f.type === 'image/gif' || f.name.toLowerCase().endsWith('.gif'))) {
     loadGif(f);
   } else {
-    alert('Por favor, envie apenas arquivos .gif!');
+    alert('please send an .gif file');
   }
 });
 fileInput.addEventListener('change', () => { 
@@ -450,10 +468,35 @@ function updateDimensionsBasedOnAspect(origW, origH) {
 
 wSlider.addEventListener('input', () => { 
   wVal.textContent = wSlider.value + ' px'; 
+  checkLagWarning();
 });
 hSlider.addEventListener('input', () => { 
   hVal.textContent = hSlider.value + ' px'; 
+  checkLagWarning();
 });
+
+speedInput.addEventListener('input', () => {
+  if (gifFramesData.length > 0) {
+    startRightPreviewAnimation();
+  }
+  checkLagWarning();
+});
+
+function checkLagWarning() {
+  const speedVal = parseInt(speedInput.value) || 0;
+  const targetW = parseInt(wSlider.value) || 0;
+  const targetH = parseInt(hSlider.value) || 0;
+  
+  // Como as TextAreas variam por frame, estimamos uma média usando targetW * targetH como aproximação base
+  const product = (targetW * targetH) * speedVal;
+  const warningElem = document.getElementById('warning');
+  
+  if (product > 3500) {
+    warningElem.style.display = 'block';
+  } else {
+    warningElem.style.display = 'none';
+  }
+}
 
 document.getElementById('copy-btn').addEventListener('click', () => {
   navigator.clipboard.writeText(codeOut.value).then(() => {
@@ -486,6 +529,7 @@ async function loadGif(file) {
       await decoder.tracks.ready;
       const frameCount = decoder.tracks.selectedTrack.frameCount;
       gifFramesData = [];
+      frameDelays = [];
 
       const tempCanvas = document.createElement('canvas');
       const tCtx = tempCanvas.getContext('2d', { willReadFrequently: true });
@@ -493,6 +537,10 @@ async function loadGif(file) {
       for (let i = 0; i < frameCount; i++) {
         const frameResult = await decoder.decode({ frameIndex: i });
         const videoFrame = frameResult.image;
+        
+        let durationMs = frameResult.duration ? frameResult.duration / 1000 : 100;
+        if (durationMs < 20) durationMs = 100; // Proteção contra delays zerados
+        frameDelays.push(durationMs);
         
         if (i === 0) {
           tempCanvas.width = videoFrame.codedWidth;
@@ -520,13 +568,16 @@ async function loadGif(file) {
     setTimeout(() => { bar.style.display = 'none'; }, 400);
 
     const frameCount = gifFramesData.length;
-    detectedRef = frameCount <= 12 ? 8 : 12;
-    document.getElementById('st-frames').textContent = frameCount;
-    document.getElementById('st-rep').textContent = detectedRef;
-    document.getElementById('stats').style.display = 'flex';
+    detectedRef = 8;
+    
+    speedInput.value = detectedRef;
+    speedInput.placeholder = detectedRef;
+
+    stFrames.textContent = frameCount;
     genBtn.disabled = false;
 
     startRightPreviewAnimation();
+    checkLagWarning();
 
   } catch (err) {
     bar.style.display = 'none';
@@ -536,10 +587,13 @@ async function loadGif(file) {
 }
 
 function startRightPreviewAnimation() {
-  if (animInterval) clearInterval(animInterval);
+  if (animTimeout) clearTimeout(animTimeout);
   let currentPreviewFrame = 0;
 
-  animInterval = setInterval(() => {
+  let speedVal = parseInt(speedInput.value) || detectedRef;
+  if (speedVal < 1) speedVal = 1;
+
+  function playNextFrame() {
     if (gifFramesData.length === 0) return;
     const targetW = parseInt(wSlider.value);
     const targetH = parseInt(hSlider.value);
@@ -557,8 +611,17 @@ function startRightPreviewAnimation() {
     ctxPreview.clearRect(0, 0, targetW, targetH);
     ctxPreview.drawImage(bigCanvas, 0, 0, frame.width, frame.height, 0, 0, targetW, targetH);
 
+    // Ajusta o tempo do frame original do gif considerando o fator de escala do speed escolhido
+    let rawDelay = frameDelays[currentPreviewFrame] || 100;
+    // Se o speed padrão de referência for 8 (125ms), multiplicamos inversamente pela proporção do speed atual
+    let adjustedDelay = rawDelay * (8 / speedVal);
+    if (adjustedDelay < 10) adjustedDelay = 10;
+
     currentPreviewFrame = (currentPreviewFrame + 1) % gifFramesData.length;
-  }, 1000 / 12);
+    animTimeout = setTimeout(playNextFrame, adjustedDelay);
+  }
+
+  playNextFrame();
 }
 
 function toHex(r, g, b) {
@@ -615,11 +678,10 @@ function processAndGenerateLua() {
   const offsetX = parseInt(document.getElementById('offset-x').value) || 0;
   const offsetY = parseInt(document.getElementById('offset-y').value) || 0;
   const playerName = document.getElementById('player-name').value.trim() || "Nickname#0000";
+  const speedVal = parseInt(speedInput.value) || detectedRef;
+  const scaleVal = parseFloat(scaleInput.value) || 1;
   const isFixed = fixedToggle.checked ? 'true' : 'false';
   const thresh = 10; 
-
-  const scaleX = 800 / targetW;
-  const scaleY = 400 / targetH;
 
   let totalBlocksMax = 0;
   const luaLines = [];
@@ -638,10 +700,10 @@ function processAndGenerateLua() {
     for (let r = 0; r < rects.length; r++) {
       const rc = rects[r];
       const hex = toHex(rc.r, rc.g, rc.b);
-      const finalX = Math.floor(offsetX + (rc.x * scaleX));
-      const finalY = Math.floor(offsetY + (rc.y * scaleY));
-      const finalW = Math.ceil(rc.w * scaleX);
-      const finalH = Math.ceil(rc.h * scaleY);
+      const finalX = Math.floor(offsetX + (rc.x * scaleVal));
+      const finalY = Math.floor(offsetY + (rc.y * scaleVal));
+      const finalW = Math.ceil(rc.w * scaleVal);
+      const finalH = Math.ceil(rc.h * scaleVal);
 
       framesString += `{${finalX},${finalY},${finalW},${finalH},0x${hex}},`;
     }
@@ -669,7 +731,7 @@ function processAndGenerateLua() {
   luaLines.push('    if name == "' + playerName + '" then');
   luaLines.push('        tfm.exec.setVampirePlayer(name, true)');
   luaLines.push('        if os.time() > time then');
-  luaLines.push('            time = os.time() + 1000 / ' + (typeof detectedRef !== 'undefined' ? detectedRef : 8));
+  luaLines.push('            time = os.time() + 1000 / ' + speedVal);
   luaLines.push('            desenharTela(id)');
   luaLines.push('            id = (id + 1) % #' + 'frames');
   luaLines.push('        end');
@@ -677,8 +739,13 @@ function processAndGenerateLua() {
   luaLines.push('end');
 
   codeOut.value = luaLines.join('\n');
+  
+  // Condição solicitada para o aviso de lag: máxima quantidade de text areas * speed > 3500
+  const lagProduct = totalBlocksMax * speedVal;
   document.getElementById('code-area').style.display = 'block';
-  document.getElementById('warning').style.display = totalBlocksMax > 500 ? 'block' : 'none';
+  document.getElementById('warning').style.display = lagProduct > 3500 ? 'block' : 'none';
+  
+  codeTitleLabel.textContent = `Generated Lua Code (${totalBlocksMax} max blocks)`;
   codeOut.scrollTop = 0;
 }
 </script>
