@@ -299,6 +299,17 @@
     border: 1px solid rgba(255, 255, 255, 0.02);
   }
   .progress-fill { width: 0%; height: 100%; background: #10b981; transition: width 0.2s; }
+
+  /* Estilização para centralizar os anúncios */
+  .ad-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 15px; /* Espaço entre os dois anúncios */
+    width: 100%;
+    margin-top: 1.5rem;
+    overflow: hidden;
+  }
 </style>
 </head>
 <body>
@@ -398,6 +409,37 @@
     </div>
     <textarea id="code-out" readonly></textarea>
   </div>
+
+  <!-- Bloco com os Anúncios Centralizados -->
+  <div class="ad-container">
+    <!-- 1º Anúncio (468x60) -->
+    <div>
+      <script>
+        atOptions = {
+          'key' : '4bf28a3f77fe337bc19c2163913d0e61',
+          'format' : 'iframe',
+          'height' : 60,
+          'width' : 468,
+          'params' : {}
+        };
+      </script>
+      <script src="https://www.highrevenueformat.com/4bf28a3f77fe337bc19c2163913d0e61/invoke.js"></script>
+    </div>
+
+    <!-- 2º Anúncio (320x50) -->
+    <div>
+      <script>
+        atOptions = {
+          'key' : 'e5395f9b4f491894ae4e309368349c7e',
+          'format' : 'iframe',
+          'height' : 50,
+          'width' : 320,
+          'params' : {}
+        };
+      </script>
+      <script src="https://www.highrevenueformat.com/e5395f9b4f491894ae4e309368349c7e/invoke.js"></script>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -487,7 +529,6 @@ function checkLagWarning() {
   const targetW = parseInt(wSlider.value) || 0;
   const targetH = parseInt(hSlider.value) || 0;
   
-  // Como as TextAreas variam por frame, estimamos uma média usando targetW * targetH como aproximação base
   const product = (targetW * targetH) * speedVal;
   const warningElem = document.getElementById('warning');
   
@@ -539,7 +580,7 @@ async function loadGif(file) {
         const videoFrame = frameResult.image;
         
         let durationMs = frameResult.duration ? frameResult.duration / 1000 : 100;
-        if (durationMs < 20) durationMs = 100; // Proteção contra delays zerados
+        if (durationMs < 20) durationMs = 100; 
         frameDelays.push(durationMs);
         
         if (i === 0) {
@@ -561,7 +602,7 @@ async function loadGif(file) {
         videoFrame.close();
       }
     } else {
-      throw new Error("Seu navegador não suporta decodificação nativa de múltiplos frames. Atualize o Chrome ou Edge.");
+      throw new Error("Seu navegador não suporta decodificação nativa de múltiplos frames.");
     }
 
     fill.style.width = '100%';
@@ -611,9 +652,7 @@ function startRightPreviewAnimation() {
     ctxPreview.clearRect(0, 0, targetW, targetH);
     ctxPreview.drawImage(bigCanvas, 0, 0, frame.width, frame.height, 0, 0, targetW, targetH);
 
-    // Ajusta o tempo do frame original do gif considerando o fator de escala do speed escolhido
     let rawDelay = frameDelays[currentPreviewFrame] || 100;
-    // Se o speed padrão de referência for 8 (125ms), multiplicamos inversamente pela proporção do speed atual
     let adjustedDelay = rawDelay * (8 / speedVal);
     if (adjustedDelay < 10) adjustedDelay = 10;
 
@@ -740,7 +779,6 @@ function processAndGenerateLua() {
 
   codeOut.value = luaLines.join('\n');
   
-  // Condição solicitada para o aviso de lag: máxima quantidade de text areas * speed > 3500
   const lagProduct = totalBlocksMax * speedVal;
   document.getElementById('code-area').style.display = 'block';
   document.getElementById('warning').style.display = lagProduct > 3500 ? 'block' : 'none';
